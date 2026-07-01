@@ -55,6 +55,6 @@ class LogRepository @Inject constructor(
      * сообщения сессий. Этот метод просто очищает локальный кэш.
      */
     suspend fun clearLocalLogs(): Unit = withContext(Dispatchers.IO) {
-        logEntryDao.clearAll()
+        logEntryDao.clearLogs()
     }
 }

@@ -48,7 +48,6 @@ fun LogViewerScreen(
                 color = MaterialTheme.colorScheme.onBackground
             )
             IconButton(onClick = {
-                viewModel.syncLogs()
                 viewModel.loadActiveRuns()
             }) {
                 Icon(Icons.Default.Refresh, contentDescription = "Обновить лог", tint = MaterialTheme.colorScheme.primary)
