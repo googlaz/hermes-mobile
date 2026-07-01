@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.collectAsState
 import com.hermes.app.data.local.entity.LogEntryEntity
 import com.hermes.app.data.remote.dto.RunDto
 import java.text.SimpleDateFormat
@@ -29,7 +29,7 @@ fun LogViewerScreen(
     viewModel: LogViewModel,
     modifier: Modifier = Modifier
 ) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
+    val state by viewModel.state.collectAsState()
 
     Column(
         modifier = modifier

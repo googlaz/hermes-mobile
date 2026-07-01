@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.collectAsState
 import com.hermes.app.data.remote.dto.FileItemDto
 import java.io.File
 
@@ -27,7 +27,7 @@ fun FileManagerScreen(
     viewModel: FileViewModel,
     modifier: Modifier = Modifier
 ) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
+    val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     var showWorkdirDialog by remember { mutableStateOf(false) }
 

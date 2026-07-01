@@ -15,7 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.collectAsState
 import com.hermes.app.ui.chat.components.ChatTabs
 import com.hermes.app.ui.chat.components.MessageBubble
 
@@ -26,7 +26,7 @@ fun ChatScreen(
     modifier: Modifier = Modifier
 ) {
     // Сбор стейта без Recomposition Storms (Pitfall 5)
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val state by viewModel.uiState.collectAsState()
     
     val listState = rememberLazyListState()
     var inputText by rememberSaveable { mutableStateOf("") } // Pitfall 7
