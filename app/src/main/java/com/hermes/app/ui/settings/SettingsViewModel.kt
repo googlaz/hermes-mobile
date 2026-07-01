@@ -80,32 +80,35 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isCheckingConnection = true, errorMessage = null) }
             try {
-                // Вызываем health-check эндпоинт Hermes API Server (ФТ-1.2)
                 val response = apiService.checkHealth()
-                if (response.isSuccessful && response.body() != null) {
-                    _state.update { 
+                if (response.isSuccessful) {
+                    // 200 OK — сервер доступен (body может быть null если Gson не смог распарсить — не критично)
+                    _state.update {
                         it.copy(
                             connectionStatus = ConnectionStatus.CONNECTED,
-                            isCheckingConnection = false
+                            isCheckingConnection = false,
+                            errorMessage = null
                         )
                     }
                 } else {
-                    _state.update { 
+                    val activeIp = securePreferences.tailscaleHost ?: "?"
+                    val activePort = securePreferences.serverPort
+                    _state.update {
                         it.copy(
                             connectionStatus = ConnectionStatus.DISCONNECTED,
-                            isCheckingConnection = false
+                            isCheckingConnection = false,
+                            errorMessage = "Сервер ответил: HTTP ${response.code()} (IP: $activeIp:$activePort)"
                         )
                     }
                 }
             } catch (e: Exception) {
-                // В случае тайм-аута или отсутствия сети (ПК выключен / VPN разорван)
                 val activeIp = securePreferences.tailscaleHost ?: "Не задан"
                 val activePort = securePreferences.serverPort
-                _state.update { 
+                _state.update {
                     it.copy(
                         connectionStatus = ConnectionStatus.DISCONNECTED,
                         isCheckingConnection = false,
-                        errorMessage = "Не удалось подключиться к ПК: ${e.localizedMessage} (Попытка на IP: $activeIp:$activePort)"
+                        errorMessage = "Не удалось подключиться: ${e.localizedMessage} (IP: $activeIp:$activePort)"
                     )
                 }
             }
