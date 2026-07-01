@@ -125,7 +125,10 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth().height(50.dp)
         ) {
             if (state.isCheckingConnection) {
-                CircularProgressIndicator(size = 24.dp, color = MaterialTheme.colorScheme.primary)
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
             } else {
                 Text("Проверить соединение")
             }
@@ -173,7 +176,11 @@ fun ConnectionStatusBanner(
         horizontalArrangement = Arrangement.Center
     ) {
         if (isChecking) {
-            CircularProgressIndicator(size = 18.dp, color = contentColor, strokeWidth = 2.dp)
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                color = contentColor,
+                strokeWidth = 2.dp
+            )
             Spacer(modifier = Modifier.width(12.dp))
             Text("Проверка связи...", color = contentColor, style = MaterialTheme.typography.bodyLarge)
         } else {

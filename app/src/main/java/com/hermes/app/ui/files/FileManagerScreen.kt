@@ -137,7 +137,10 @@ fun FileManagerScreen(
             modifier = Modifier.fillMaxWidth().height(50.dp)
         ) {
             if (state.isUploading) {
-                CircularProgressIndicator(size = 24.dp, color = MaterialTheme.colorScheme.onPrimary)
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
             } else {
                 Text("Загрузить пакет файлов на ПК (до 50 шт.)")
             }

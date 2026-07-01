@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -94,7 +95,7 @@ fun AppNavigation() {
             }
             composable(Screen.Models.route) {
                 // Извлекаем состояние выбранного чата из ChatViewModel, чтобы переключать модель именно на ней (ФТ-3.2)
-                val chatState by chatViewModel.uiState.collectAsStateWithLifecycle()
+                val chatState by chatViewModel.uiState.collectAsState()
                 val currentSession = chatState.sessions.find { it.id == chatState.activeSessionId }
                 
                 ModelSwitcherScreen(
