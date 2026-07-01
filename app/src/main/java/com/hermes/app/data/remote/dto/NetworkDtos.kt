@@ -60,6 +60,12 @@ data class SwitchModelRequest(
     @SerializedName("provider") val provider: String
 )
 
+// Запрос на обновление параметров сессии через PATCH (модель, провайдер)
+data class PatchSessionRequest(
+    @SerializedName("model") val model: String? = null,
+    @SerializedName("provider") val provider: String? = null
+)
+
 // 5. Запись файла
 data class FileItemDto(
     @SerializedName("name") val name: String,

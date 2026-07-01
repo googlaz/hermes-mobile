@@ -15,46 +15,19 @@ class LogRepository @Inject constructor(
     private val logEntryDao: LogEntryDao,
     private val apiService: HermesApiService
 ) {
-    // Реактивное наблюдение над сохраненными локально логами для терминала (ФТ-5.1)
+    // Реактивное наблюдение за локально закэшированными логами (ФТ-5.1)
     val observeLocalLogs: Flow<List<LogEntryEntity>> = logEntryDao.observeAllLogs()
 
     /**
-     * Стягивает свежие логи с API сервера и кэширует их в Room (ФТ-5.1)
-     */
-    suspend fun syncLogsFromServer(limit: Int = 100, offset: Int = 0): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            val response = apiService.getLogs(limit, offset)
-            if (response.isSuccessful && response.body() != null) {
-                val dtoList = response.body()!!
-                val entities = dtoList.map { dto ->
-                    LogEntryEntity(
-                        runId = dto.runId,
-                        level = dto.level,
-                        tag = dto.tag,
-                        message = dto.message,
-                        timestamp = dto.timestamp
-                    )
-                }
-                logEntryDao.insertLogs(entities)
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception("Не удалось синхронизировать логи: ${response.code()}"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Получить активные фоновые задачи (runs) с ПК (ФТ-5.2)
+     * Получить список активных задач (jobs) с ПК (ФТ-5.2)
      */
     suspend fun getActiveRuns(): Result<List<RunDto>> = withContext(Dispatchers.IO) {
         try {
-            val response = apiService.getActiveRuns()
+            val response = apiService.getActiveJobs()
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                Result.failure(Exception("Не удалось получить runs: ${response.code()}"))
+                Result.failure(Exception("Не удалось получить задачи: ${response.code()}"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -62,11 +35,11 @@ class LogRepository @Inject constructor(
     }
 
     /**
-     * Отмена выполнения фоновой задачи на ПК (ФТ-5.2)
+     * Отмена выполняющейся задачи на ПК (ФТ-5.2)
      */
     suspend fun cancelActiveRun(runId: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            val response = apiService.cancelRun(runId)
+            val response = apiService.cancelJob(runId)
             if (response.isSuccessful) {
                 Result.success(Unit)
             } else {
@@ -75,5 +48,13 @@ class LogRepository @Inject constructor(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    /**
+     * Hermes API не имеет эндпоинта /api/logs — логи получаем через
+     * сообщения сессий. Этот метод просто очищает локальный кэш.
+     */
+    suspend fun clearLocalLogs(): Unit = withContext(Dispatchers.IO) {
+        logEntryDao.clearAll()
     }
 }

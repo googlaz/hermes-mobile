@@ -26,41 +26,34 @@ class LogViewModel @Inject constructor(
     val state: StateFlow<LogUiState> = _state.asStateFlow()
 
     init {
-        // Подключаемся к локально кэшированным логам Room DB (ФТ-5.1)
+        // Реактивное наблюдение за локальными логами из Room
         logRepository.observeLocalLogs
             .onEach { list -> _state.update { it.copy(logs = list) } }
             .launchIn(viewModelScope)
 
-        syncLogs()
         loadActiveRuns()
-    }
-
-    fun syncLogs() {
-        viewModelScope.launch {
-            _state.update { it.copy(isSyncing = true, error = null) }
-            logRepository.syncLogsFromServer()
-                .onSuccess { _state.update { it.copy(isSyncing = false) } }
-                .onFailure { err -> _state.update { it.copy(isSyncing = false, error = "Ошибка синхронизации логов: ${err.message}") } }
-        }
     }
 
     fun loadActiveRuns() {
         viewModelScope.launch {
+            _state.update { it.copy(isSyncing = true, error = null) }
             logRepository.getActiveRuns()
-                .onSuccess { list -> _state.update { it.copy(activeRuns = list) } }
-                .onFailure { err -> _state.update { it.copy(error = "Ошибка чтения runs: ${err.message}") } }
+                .onSuccess { list -> _state.update { it.copy(activeRuns = list, isSyncing = false) } }
+                .onFailure { err -> _state.update { it.copy(isSyncing = false, error = "Ошибка чтения задач: ${err.message}") } }
         }
     }
 
     fun cancelRun(runId: String) {
         viewModelScope.launch {
             logRepository.cancelActiveRun(runId)
-                .onSuccess {
-                    loadActiveRuns() // Переподгружаем список
-                }
-                .onFailure { err ->
-                    _state.update { it.copy(error = "Не удалось отменить задачу: ${err.message}") }
-                }
+                .onSuccess { loadActiveRuns() }
+                .onFailure { err -> _state.update { it.copy(error = "Не удалось отменить: ${err.message}") } }
+        }
+    }
+
+    fun clearLogs() {
+        viewModelScope.launch {
+            logRepository.clearLocalLogs()
         }
     }
 }
