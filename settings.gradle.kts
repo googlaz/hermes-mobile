@@ -16,7 +16,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // Необходимый репозиторий для Tailscale Android SDK (если они хостят свои либы там)
+        // Официальный мавен-репозиторий Tailscale Android SDK
+        maven { url = java.net.URI("https://pkgs.tailscale.com/android") }
         maven { url = java.net.URI("https://jitpack.io") }
     }
 }
