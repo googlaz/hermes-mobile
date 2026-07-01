@@ -2,6 +2,7 @@ package com.hermes.app.di
 
 import com.hermes.app.data.local.SecurePreferences
 import com.hermes.app.data.remote.AuthInterceptor
+import com.hermes.app.data.remote.DynamicUrlInterceptor
 import com.hermes.app.data.remote.HermesApiService
 import dagger.Module
 import dagger.Provides
@@ -30,14 +31,16 @@ object NetworkModule {
     @Singleton
     fun provideOkHttpClient(
         authInterceptor: AuthInterceptor,
+        dynamicUrlInterceptor: DynamicUrlInterceptor,
         loggingInterceptor: HttpLoggingInterceptor
     ): OkHttpClient {
         return OkHttpClient.Builder()
+            .addInterceptor(dynamicUrlInterceptor) // На лету подставляет актуальный сохраненный IP (для ФТ-1.1, ФТ-6.1)
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(5, TimeUnit.SECONDS) // Сократим таймаут до 5с для быстрой выдачи баннеров
+            .readTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
             .build()
     }
 
@@ -47,7 +50,7 @@ object NetworkModule {
         okHttpClient: OkHttpClient,
         securePreferences: SecurePreferences
     ): Retrofit {
-        // Базовый URL собирается на основе настроек Tailscale (ФТ-1.1, ФТ-6.1)
+        // Дефолтный базовый URL (будет заменен динамически с помощью DynamicUrlInterceptor)
         val host = securePreferences.tailscaleHost ?: "127.0.0.1"
         val port = securePreferences.serverPort
         val baseUrl = "http://$host:$port/"
@@ -64,8 +67,6 @@ object NetworkModule {
     fun provideHermesApiService(
         retrofit: Retrofit
     ): HermesApiService {
-        // Мы можем динамически пересоздавать API клиент или использовать Dynamic URL
-        // Ссылка на дефолтный инстанс:
         return retrofit.create(HermesApiService::class.java)
     }
 }
