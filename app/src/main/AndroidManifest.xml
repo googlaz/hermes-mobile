@@ -16,6 +16,8 @@
         android:roundIcon="@android:mipmap/sym_def_app_icon"
         android:supportsRtl="true"
         android:theme="@style/Theme.Hermes"
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config"
         tools:targetApi="35">
 
         <activity
