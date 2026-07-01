@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Базовая тема приложения для MainActivity (без Action Bar) -->
-    <style name="Theme.AppCompat.NoActionBar" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Мы используем строго темные цвета в Jetpack Compose, эта тема просто для запуска Activity -->
-        <item name="colorPrimary">#64B5F6</item>
-        <item name="android:statusBarColor">#121212</item>
-        <item name="android:windowLightStatusBar">false</item>
+    <!-- 
+       Мы используем системную тему Android Material (NoActionBar), которая встроена в ОС Android нативно.
+       Это избавляет нас от тяжелых XML зависимостей (appcompat / material components view),
+       так как весь наш интерфейс построен полностью на Jetpack Compose! (НФТ-3)
+    -->
+    <style name="Theme.Hermes" parent="android:Theme.Material.NoActionBar">
+         <item name="android:statusBarColor">#121212</item>
+         <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>
