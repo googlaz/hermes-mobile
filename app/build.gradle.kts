@@ -35,8 +35,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    kotlinOptions {
-        jvmTarget = "11"
+    // Резолвим предупреждение Gradle о депрекации kotlinOptions
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+        }
     }
 
     buildFeatures {
@@ -56,17 +59,17 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
 
-    // Lifecycle & ViewModel
-    implementation(libs.lifecycle-viewmodel-compose)
-    implementation(libs.lifecycle-runtime-compose)
+    // Lifecycle & ViewModel (все дефисы заменяются на точки в Kotlin DSL)
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.lifecycle.runtime.compose)
 
     // Navigation
-    implementation(libs.navigation-compose)
+    implementation(libs.navigation.compose)
 
     // Dependency Injection (Hilt)
-    implementation(libs.hilt-android)
+    implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
-    implementation(libs.hilt.navigation-compose)
+    implementation(libs.hilt.navigation.compose)
 
     // Database (Room)
     implementation(libs.room.runtime)
@@ -78,7 +81,7 @@ dependencies {
     implementation(libs.okhttp.sse)
     implementation(libs.okhttp.logging)
     implementation(libs.retrofit)
-    implementation(libs.retrofit-gson)
+    implementation(libs.retrofit.gson)
 
     // Tailscale Android SDK
     implementation(libs.tailscale.android)
@@ -100,5 +103,5 @@ dependencies {
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test)
     androidTestImplementation(libs.androidx.test.ext)
-    androidTestImplementation(libs.espresso-core)
+    androidTestImplementation(libs.espresso.core)
 }
