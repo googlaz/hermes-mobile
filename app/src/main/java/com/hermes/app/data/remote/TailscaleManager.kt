@@ -2,13 +2,14 @@ package com.hermes.app.data.remote
 
 import android.content.Context
 import com.hermes.app.data.local.SecurePreferences
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.net.InetAddress
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class TailscaleManager @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val securePreferences: SecurePreferences
 ) {
     /**

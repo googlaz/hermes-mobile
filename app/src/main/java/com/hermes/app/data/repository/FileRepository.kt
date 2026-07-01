@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import com.hermes.app.data.remote.HermesApiService
 import com.hermes.app.data.remote.dto.FileItemDto
 import com.hermes.app.data.remote.dto.FileUploadResponse
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -22,7 +23,7 @@ import javax.inject.Singleton
 
 @Singleton
 class FileRepository @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val apiService: HermesApiService
 ) {
     /**
