@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Базовая тема приложения для MainActivity (без Action Bar) -->
+    <style name="Theme.AppCompat.NoActionBar" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Мы используем строго темные цвета в Jetpack Compose, эта тема просто для запуска Activity -->
+        <item name="colorPrimary">#64B5F6</item>
+        <item name="android:statusBarColor">#121212</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

@@ -1,0 +1,45 @@
+# Built artifacts
+*.apk
+*.ap_
+*.aab
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+
+# Gradle files
+.gradle/
+build/
+app/build/
+
+# Kotlin
+.kotlin/
+
+# XML files we don't want to track (like layout editor state)
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/nav/
+.idea/assetWizardSettings.xml
+
+# Local configuration file (contains local paths, SDK paths, keys)
+local.properties
+
+# Log files
+*.log
+
+# Android Studio / IntelliJ IDEA
+*.iml
+.idea/
+*.ipr
+*.iws
+
+# OS-generated files
+.DS_Store
+Thumbs.db
