@@ -31,7 +31,7 @@ class SecurePreferences @Inject constructor(
         }
 
     var tailscaleHost: String?
-        get() = sharedPreferences.getString(KEY_TAILSCALE_HOST, "100.100.100.100")
+        get() = sharedPreferences.getString(KEY_TAILSCALE_HOST, null)  // null = не настроено
         set(value) {
             sharedPreferences.edit().putString(KEY_TAILSCALE_HOST, value).apply()
         }

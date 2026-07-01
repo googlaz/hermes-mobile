@@ -29,8 +29,14 @@ fun ChatScreen(
     val state by viewModel.uiState.collectAsState()
     
     val listState = rememberLazyListState()
-    var inputText by rememberSaveable { mutableStateOf("") } // Pitfall 7
+    var inputText by rememberSaveable { mutableStateOf("") }
     var showCreateDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Показываем ошибки (нет соединения, сессия не создалась и т.д.)
+    LaunchedEffect(state.error) {
+        state.error?.let { snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long) }
+    }
 
     // Контролируем автоскрол при прилете новых токенов
     LaunchedEffect(state.messages.size, state.streamingTextBySession[state.activeSessionId]) {
@@ -42,8 +48,9 @@ fun ChatScreen(
         }
     }
 
+    Box(modifier = modifier.fillMaxSize()) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
@@ -187,4 +194,11 @@ fun ChatScreen(
             }
         )
     }
+
+    // Snackbar для ошибок (нет соединения и т.д.)
+    SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = Modifier.align(Alignment.BottomCenter)
+    )
+    } // Box
 }

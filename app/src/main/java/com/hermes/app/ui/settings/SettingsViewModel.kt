@@ -24,16 +24,17 @@ class SettingsViewModel @Inject constructor(
     val state: StateFlow<SettingsState> = _state.asStateFlow()
 
     init {
-        // Загружаем сохраненные настройки из надежного Keystore хранилища (НФТ-5)
         _state.update {
             it.copy(
-                host = securePreferences.tailscaleHost ?: "100.100.100.100",
+                host = securePreferences.tailscaleHost ?: "",
                 port = securePreferences.serverPort.toString(),
                 token = securePreferences.apiServerKey ?: ""
             )
         }
-        // Автоматически запускаем хелс-чек при открытии экрана
-        checkConnection()
+        // Авточек только если IP уже настроен
+        if (!securePreferences.tailscaleHost.isNullOrBlank()) {
+            checkConnection()
+        }
     }
 
     fun onEvent(event: SettingsEvent) {

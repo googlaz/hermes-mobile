@@ -28,7 +28,8 @@ class ModelViewModel @Inject constructor(
     val state: StateFlow<ModelUiState> = _state.asStateFlow()
 
     init {
-        loadModels()
+        // Не загружаем автоматически — только по явному запросу пользователя (кнопка или onResume)
+        // чтобы не стрелять в 100.100.100.100 до того как пользователь настроит соединение
     }
 
     fun loadModels() {

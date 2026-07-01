@@ -47,22 +47,11 @@ class ChatRepository @Inject constructor(
                 sessionDao.upsertSession(entity)
                 Result.success(entity)
             } else {
-                Result.failure(Exception("Ошибка создания сессии на сервере: ${response.code()}"))
+                Result.failure(Exception("Ошибка создания сессии: HTTP ${response.code()}. Проверьте подключение в Настройках."))
             }
         } catch (e: Exception) {
-            // Офлайн режим (ФТ-3.8): создаем временную сессию локально в Room
-            val localId = UUID.randomUUID().toString()
-            val now = System.currentTimeMillis()
-            val entity = ChatSessionEntity(
-                id = localId,
-                title = "$title (Офлайн)",
-                model = model,
-                provider = provider,
-                createdAt = now,
-                updatedAt = now
-            )
-            sessionDao.upsertSession(entity)
-            Result.success(entity)
+            // Не создаём офлайн-сессию — локальный UUID бесполезен для SSE и отправки сообщений
+            Result.failure(Exception("Нет соединения с Hermes. Настройте IP и ключ в разделе Настройки."))
         }
     }
 
