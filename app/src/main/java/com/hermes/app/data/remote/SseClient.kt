@@ -30,12 +30,12 @@ class SseClient @Inject constructor(
     fun connectSessionStream(sessionId: String): Flow<String> {
         val host = securePreferences.tailscaleHost ?: "127.0.0.1"
         val port = securePreferences.serverPort
-        val url = "http://$host:$port/api/sessions/$sessionId/stream"
+        // Реальный стриминговый эндпоинт Hermes: POST /api/sessions/{id}/chat/stream
+        val url = "http://$host:$port/api/sessions/$sessionId/chat/stream"
 
         return callbackFlow {
             val request = Request.Builder()
                 .url(url)
-                // Токен авторизации подшивается так же, как в AuthInterceptor
                 .header("Authorization", "Bearer ${securePreferences.apiServerKey ?: ""}")
                 .header("Accept", "text/event-stream")
                 .build()

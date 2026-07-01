@@ -4,9 +4,14 @@ import com.google.gson.annotations.SerializedName
 
 // 1. Статус здоровья сервера
 data class HealthStatusDto(
-    @SerializedName("status") val status: String, // "ok", "error"
-    @SerializedName("version") val version: String,
-    @SerializedName("uptime") val uptime: Long
+    @SerializedName("status") val status: String,       // "ok"
+    @SerializedName("platform") val platform: String?,  // "hermes-agent"
+    @SerializedName("version") val version: String?     // "0.17.0"
+)
+
+// Ответ /v1/models (OpenAI-совместимый формат)
+data class ModelsResponse(
+    @SerializedName("data") val data: List<ModelDto>
 )
 
 // 2. Сессия
