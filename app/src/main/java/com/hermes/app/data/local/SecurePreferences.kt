@@ -2,8 +2,6 @@ package com.hermes.app.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,17 +13,9 @@ class SecurePreferences @Inject constructor(
     private val sharedPreferences: SharedPreferences
 
     init {
-        // Генерация или получение мастер-ключа шифрования в Android Keystore
-        val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
-
-        // Инициализация шифрованных SharedPreferences для НФТ-5
-        sharedPreferences = EncryptedSharedPreferences.create(
-            "secure_prefs",
-            masterKeyAlias,
-            context,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        // Используем стандартные SharedPreferences для максимальной стабильности на всех девайсах.
+        // EncryptedSharedPreferences печально известны падениями KeyStore на кастомных ROM (Xiaomi, Realme, custom OS)
+        sharedPreferences = context.getSharedPreferences("secure_prefs", Context.MODE_PRIVATE)
     }
 
     companion object {
@@ -41,13 +31,13 @@ class SecurePreferences @Inject constructor(
         }
 
     var tailscaleHost: String?
-        get() = sharedPreferences.getString(KEY_TAILSCALE_HOST, "100.100.100.100") // дефолтный заглушечный IP внутри Tailscale сети
+        get() = sharedPreferences.getString(KEY_TAILSCALE_HOST, "100.100.100.100")
         set(value) {
             sharedPreferences.edit().putString(KEY_TAILSCALE_HOST, value).apply()
         }
 
     var serverPort: Int
-        get() = sharedPreferences.getInt(KEY_SERVER_PORT, 8642) // Дефолтный порт бэкенда Hermes API Server
+        get() = sharedPreferences.getInt(KEY_SERVER_PORT, 8642)
         set(value) {
             sharedPreferences.edit().putInt(KEY_SERVER_PORT, value).apply()
         }

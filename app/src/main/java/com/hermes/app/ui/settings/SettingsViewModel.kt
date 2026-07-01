@@ -99,11 +99,13 @@ class SettingsViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 // В случае тайм-аута или отсутствия сети (ПК выключен / VPN разорван)
+                val activeIp = securePreferences.tailscaleHost ?: "Не задан"
+                val activePort = securePreferences.serverPort
                 _state.update { 
                     it.copy(
                         connectionStatus = ConnectionStatus.DISCONNECTED,
                         isCheckingConnection = false,
-                        errorMessage = "Не удалось подключиться к ПК: ${e.localizedMessage}"
+                        errorMessage = "Не удалось подключиться к ПК: ${e.localizedMessage} (Попытка на IP: $activeIp:$activePort)"
                     )
                 }
             }
