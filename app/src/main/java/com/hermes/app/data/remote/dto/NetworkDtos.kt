@@ -139,6 +139,16 @@ data class SetModelResponse(
     @SerializedName("error") val error: String? = null
 )
 
+// Ответ sidecar POST /upload — файл сохранён на ПК, возвращён абсолютный путь.
+data class SidecarUploadResponse(
+    @SerializedName("ok") val ok: Boolean = false,
+    @SerializedName("path") val path: String? = null,
+    @SerializedName("filename") val filename: String? = null,
+    @SerializedName("size") val size: Long = 0,
+    @SerializedName("is_text") val isText: Boolean = false,
+    @SerializedName("error") val error: String? = null
+)
+
 // 5. Запись файла
 data class FileItemDto(
     @SerializedName("name") val name: String,

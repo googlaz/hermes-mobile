@@ -1,11 +1,17 @@
 package com.hermes.app.ui.chat
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
@@ -32,6 +38,13 @@ fun ChatScreen(
     var inputText by rememberSaveable { mutableStateOf("") }
     var showCreateDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Пикер файлов (SAF, без разрешений хранилища): Excel/Word/PDF/картинки/любые
+    val filePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris ->
+        if (uris.isNotEmpty()) viewModel.addAttachments(uris)
+    }
 
     // Показываем ошибки (нет соединения, сессия не создалась и т.д.)
     LaunchedEffect(state.error) {
@@ -119,6 +132,42 @@ fun ChatScreen(
 
         // 3. Нижняя панель ввода и управления
         if (state.activeSessionId != null) {
+            // 3a. Чипы прикреплённых файлов (📎 имя  ×)
+            if (state.pendingAttachments.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    state.pendingAttachments.forEach { att ->
+                        AssistChip(
+                            onClick = { viewModel.removeAttachment(att.uri) },
+                            label = { Text("📎 ${att.name}") },
+                            trailingIcon = {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Убрать ${att.name}",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            },
+                            modifier = Modifier.padding(end = 6.dp)
+                        )
+                    }
+                }
+            }
+
+            // 3b. Индикатор загрузки файлов на ПК
+            if (state.isUploadingAttachments) {
+                Text(
+                    text = "Загрузка файлов…",
+                    color = MaterialTheme.colorScheme.secondary,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 2.dp)
+                )
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -128,6 +177,14 @@ fun ChatScreen(
                 // Кнопка удаления вкладки
                 IconButton(onClick = { viewModel.deleteActiveSession() }) {
                     Icon(Icons.Default.Delete, contentDescription = "Удалить вкладку", tint = MaterialTheme.colorScheme.error)
+                }
+
+                // Кнопка прикрепления файлов (📎) — открывает системный пикер (SAF)
+                IconButton(
+                    onClick = { filePicker.launch("*/*") },
+                    enabled = !state.isSending
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Прикрепить файлы", tint = MaterialTheme.colorScheme.primary)
                 }
 
                 // Текстовый инпут (ФТ-2.3)
@@ -145,13 +202,13 @@ fun ChatScreen(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Кнопка Отправить (ФТ-2.3)
+                // Кнопка Отправить (ФТ-2.3) — активна, если есть текст ИЛИ прикреплённые файлы
                 IconButton(
                     onClick = {
                         viewModel.sendMessage(inputText)
                         inputText = ""
                     },
-                    enabled = inputText.isNotBlank() && !state.isSending,
+                    enabled = (inputText.isNotBlank() || state.pendingAttachments.isNotEmpty()) && !state.isSending,
                     colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = "Отправить", tint = MaterialTheme.colorScheme.onPrimary)

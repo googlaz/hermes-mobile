@@ -4,7 +4,9 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import com.hermes.app.data.remote.HermesApiService
+import com.hermes.app.data.remote.SidecarApiService
 import com.hermes.app.data.remote.dto.ChatCompletionResponse
+import com.hermes.app.data.remote.dto.SidecarUploadResponse
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -24,43 +26,32 @@ import javax.inject.Singleton
 @Singleton
 class FileRepository @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val apiService: HermesApiService
+    private val apiService: HermesApiService,
+    private val sidecarApi: SidecarApiService
 ) {
     /**
-     * Пакетная отправка файлов в активную сессию чата (ФТ-4.3).
-     * Hermes API не имеет отдельного файлового менеджера — файлы отправляются
-     * как multipart в POST /api/sessions/{id}/chat.
+     * Загрузка файла на ПК через sidecar POST /upload (порт 8643).
+     * Sidecar сохраняет байты в кэш документов Hermes и возвращает абсолютный путь.
+     * Приложение затем добавляет этот путь в текст сообщения, и агент открывает файл
+     * своими инструментами (terminal/read_file) — так же, как это делает Telegram-бот.
      */
-    suspend fun uploadFilesToSession(
-        sessionId: String,
-        uris: List<Uri>
-    ): Result<ChatCompletionResponse> = withContext(Dispatchers.IO) {
+    suspend fun uploadToSidecar(uri: Uri): Result<SidecarUploadResponse> = withContext(Dispatchers.IO) {
         try {
-            val limitedUris = uris.take(50)
-            val parts = mutableListOf<MultipartBody.Part>()
+            val filename = getFileNameFromUri(uri) ?: "upload_${System.currentTimeMillis()}"
+            val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
+            val body = createStreamingRequestBody(uri, mimeType)
+            val part = MultipartBody.Part.createFormData("file", filename, body)
 
-            for (uri in limitedUris) {
-                val filename = getFileNameFromUri(uri) ?: "upload_${System.currentTimeMillis()}"
-                val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
-                val body = createStreamingRequestBody(uri, mimeType)
-                parts.add(MultipartBody.Part.createFormData("files", filename, body))
-            }
-
-            // Best-effort: /chat ожидает поле "message"; добавляем текстовую часть,
-            // чтобы чистая multipart-загрузка файлов не отклонялась с 400.
-            val messagePart = RequestBody.create(
-                "text/plain".toMediaTypeOrNull(),
-                "Загружены файлы: " + limitedUris.mapNotNull { getFileNameFromUri(it) }.joinToString(", ")
-            )
-
-            val response = apiService.uploadFilesToSession(sessionId, parts, messagePart)
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
+            val response = sidecarApi.uploadFile(part)
+            val payload = response.body()
+            if (response.isSuccessful && payload != null && payload.ok && payload.path != null) {
+                Result.success(payload)
             } else {
-                Result.failure(Exception("Сбой загрузки файлов: ${response.code()}"))
+                val err = payload?.error ?: "код ${response.code()}"
+                Result.failure(Exception("Не удалось загрузить «$filename» на ПК ($err)"))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception("Ошибка загрузки файла на ПК: ${e.message}"))
         }
     }
 
@@ -106,6 +97,9 @@ class FileRepository @Inject constructor(
                 stream.use { sink.writeAll(it.source()) }
             }
         }
+
+    /** Публичное разрешение отображаемого имени файла из content:// Uri (для чипов в UI). */
+    fun resolveFileName(uri: Uri): String = getFileNameFromUri(uri) ?: "файл"
 
     private fun getFileNameFromUri(uri: Uri): String? {
         if (uri.scheme == "content") {

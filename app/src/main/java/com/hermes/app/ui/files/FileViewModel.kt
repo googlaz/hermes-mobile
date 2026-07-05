@@ -36,17 +36,31 @@ class FileViewModel @Inject constructor(
     }
 
     /**
-     * Загрузка файлов ВРЕМЕННО не поддерживается сервером Hermes:
-     * /chat принимает только JSON (текст и image_url-ссылки), multipart отклоняется
-     * с unsupported_content_type. Показываем понятное уведомление вместо битого запроса.
+     * Загрузка файлов на ПК через sidecar POST /upload. Sidecar сохраняет файлы
+     * в кэш документов Hermes и возвращает абсолютные пути. Здесь показываем краткий
+     * статус; основной сценарий работы с файлами — прикрепление прямо в чате.
      */
     fun uploadFiles(uris: List<Uri>) {
-        _state.update {
-            it.copy(
-                isUploading = false,
-                uploadStatus = null,
-                error = "Загрузка файлов пока не поддерживается сервером Hermes (только текст и изображения-ссылки)."
-            )
+        if (uris.isEmpty()) return
+        viewModelScope.launch {
+            _state.update { it.copy(isUploading = true, uploadStatus = "Загрузка файлов…", error = null) }
+            val names = mutableListOf<String>()
+            var failed: String? = null
+            for (uri in uris) {
+                fileRepository.uploadToSidecar(uri)
+                    .onSuccess { resp -> names.add(resp.filename ?: "файл") }
+                    .onFailure { err -> failed = err.message }
+            }
+            if (failed != null) {
+                _state.update { it.copy(isUploading = false, error = failed) }
+            } else {
+                _state.update {
+                    it.copy(
+                        isUploading = false,
+                        uploadStatus = "Загружено на ПК: ${names.joinToString(", ")}. Прикрепите файлы в чате, чтобы агент их разобрал."
+                    )
+                }
+            }
         }
     }
 

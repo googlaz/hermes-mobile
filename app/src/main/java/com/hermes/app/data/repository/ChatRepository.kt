@@ -81,14 +81,18 @@ class ChatRepository @Inject constructor(
     /**
      * Отправка нового сообщения от пользователя
      */
-    suspend fun sendUserMessage(sessionId: String, content: String): Result<ChatMessageEntity> = withContext(Dispatchers.IO) {
+    suspend fun sendUserMessage(
+        sessionId: String,
+        content: String,
+        displayContent: String = content
+    ): Result<ChatMessageEntity> = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         val messageId = UUID.randomUUID().toString()
         val localUserMessage = ChatMessageEntity(
             id = messageId,
             sessionId = sessionId,
             role = "user",
-            content = content,
+            content = displayContent,
             timestamp = now
         )
 
