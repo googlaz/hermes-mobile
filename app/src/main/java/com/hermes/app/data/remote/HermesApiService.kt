@@ -18,12 +18,12 @@ interface HermesApiService {
 
     // === 3. Сессии ===
     @GET("api/sessions")
-    suspend fun getSessions(): Response<List<ChatSessionDto>>
+    suspend fun getSessions(): Response<SessionListResponse>
 
     @POST("api/sessions")
     suspend fun createSession(
         @Body request: CreateSessionRequest
-    ): Response<ChatSessionDto>
+    ): Response<CreateSessionResponse>
 
     @DELETE("api/sessions/{id}")
     suspend fun deleteSession(
@@ -33,7 +33,7 @@ interface HermesApiService {
     @GET("api/sessions/{id}/messages")
     suspend fun getMessages(
         @Path("id") sessionId: String
-    ): Response<List<ChatMessageDto>>
+    ): Response<MessageListResponse>
 
     // Отправка сообщения (не-стриминговый)
     @POST("api/sessions/{id}/chat")
@@ -42,12 +42,12 @@ interface HermesApiService {
         @Body request: SendMessageRequest
     ): Response<ChatMessageDto>
 
-    // Переключение модели в сессии через PATCH
+    // Переключение модели в сессии через PATCH (возвращает тот же envelope {"session":{...}})
     @PATCH("api/sessions/{id}")
     suspend fun patchSession(
         @Path("id") sessionId: String,
         @Body request: PatchSessionRequest
-    ): Response<ChatSessionDto>
+    ): Response<CreateSessionResponse>
 
     // === 4. Jobs (активные задачи) ===
     @GET("api/jobs")

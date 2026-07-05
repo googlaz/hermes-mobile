@@ -35,14 +35,15 @@ class ChatRepository @Inject constructor(
         try {
             val response = apiService.createSession(request)
             if (response.isSuccessful && response.body() != null) {
-                val dto = response.body()!!
+                val dto = response.body()!!.session
+                val createdMs = (dto.startedAt * 1000).toLong()
                 val entity = ChatSessionEntity(
                     id = dto.id,
-                    title = dto.title,
+                    title = dto.title ?: "New Chat",
                     model = dto.model,
-                    provider = dto.provider,
-                    createdAt = dto.createdAt,
-                    updatedAt = dto.updatedAt
+                    provider = provider,
+                    createdAt = createdMs,
+                    updatedAt = createdMs
                 )
                 sessionDao.upsertSession(entity)
                 Result.success(entity)

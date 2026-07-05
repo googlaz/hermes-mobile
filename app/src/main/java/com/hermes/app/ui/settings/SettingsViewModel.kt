@@ -83,13 +83,34 @@ class SettingsViewModel @Inject constructor(
             try {
                 val response = apiService.checkHealth()
                 if (response.isSuccessful) {
-                    // 200 OK — сервер доступен (body может быть null если Gson не смог распарсить — не критично)
-                    _state.update {
-                        it.copy(
-                            connectionStatus = ConnectionStatus.CONNECTED,
-                            isCheckingConnection = false,
-                            errorMessage = null
-                        )
+                    // 200 OK — сервер доступен. Теперь проверяем API-ключ на аутентифицированном эндпоинте.
+                    val authResponse = apiService.getSessions()
+                    if (authResponse.isSuccessful) {
+                        _state.update {
+                            it.copy(
+                                connectionStatus = ConnectionStatus.CONNECTED,
+                                isCheckingConnection = false,
+                                errorMessage = null
+                            )
+                        }
+                    } else if (authResponse.code() == 401) {
+                        _state.update {
+                            it.copy(
+                                connectionStatus = ConnectionStatus.DISCONNECTED,
+                                isCheckingConnection = false,
+                                errorMessage = "Неверный API-ключ (HTTP 401). Проверьте ключ."
+                            )
+                        }
+                    } else {
+                        val activeIp = securePreferences.tailscaleHost ?: "?"
+                        val activePort = securePreferences.serverPort
+                        _state.update {
+                            it.copy(
+                                connectionStatus = ConnectionStatus.DISCONNECTED,
+                                isCheckingConnection = false,
+                                errorMessage = "Сервер ответил: HTTP ${authResponse.code()} (IP: $activeIp:$activePort)"
+                            )
+                        }
                     }
                 } else {
                     val activeIp = securePreferences.tailscaleHost ?: "?"

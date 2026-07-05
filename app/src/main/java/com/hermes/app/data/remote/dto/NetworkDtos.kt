@@ -14,17 +14,33 @@ data class ModelsResponse(
     @SerializedName("data") val data: List<ModelDto>
 )
 
-// 2. Сессия
+// 2. Сессия (реальный формат Hermes API Server v0.17.0)
 data class ChatSessionDto(
     @SerializedName("id") val id: String,
-    @SerializedName("title") val title: String,
+    @SerializedName("title") val title: String?,          // может быть null
     @SerializedName("model") val model: String,
-    @SerializedName("provider") val provider: String,
-    @SerializedName("createdAt") val createdAt: Long,
-    @SerializedName("updatedAt") val updatedAt: Long
+    @SerializedName("started_at") val startedAt: Double,  // FLOAT-секунды
+    @SerializedName("last_active") val lastActive: Double? = null, // FLOAT-секунды (в списке)
+    @SerializedName("message_count") val messageCount: Int? = null
 )
 
-// Запрос на создание сессии
+// Ответ на создание сессии — объект вложен под "session"
+data class CreateSessionResponse(
+    @SerializedName("object") val object_: String?,
+    @SerializedName("session") val session: ChatSessionDto
+)
+
+// Список сессий: {"object":"list","data":[...]}
+data class SessionListResponse(
+    @SerializedName("data") val data: List<ChatSessionDto>
+)
+
+// Список сообщений: {"object":"list","session_id":"...","data":[...]}
+data class MessageListResponse(
+    @SerializedName("data") val data: List<ChatMessageDto>
+)
+
+// Запрос на создание сессии (provider сервер игнорирует, но не мешает)
 data class CreateSessionRequest(
     @SerializedName("title") val title: String,
     @SerializedName("model") val model: String,
@@ -40,9 +56,9 @@ data class ChatMessageDto(
     @SerializedName("timestamp") val timestamp: Long
 )
 
-// Запрос на отправку сообщения
+// Запрос на отправку сообщения — сервер ожидает поле "message"
 data class SendMessageRequest(
-    @SerializedName("content") val content: String
+    @SerializedName("message") val content: String
 )
 
 // 4. Доступные LLM-модели
