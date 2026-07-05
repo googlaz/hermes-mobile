@@ -36,28 +36,17 @@ class FileViewModel @Inject constructor(
     }
 
     /**
-     * Пакетный аплоад файлов в текущую сессию (ФТ-4.3, до 50 штук)
+     * Загрузка файлов ВРЕМЕННО не поддерживается сервером Hermes:
+     * /chat принимает только JSON (текст и image_url-ссылки), multipart отклоняется
+     * с unsupported_content_type. Показываем понятное уведомление вместо битого запроса.
      */
     fun uploadFiles(uris: List<Uri>) {
-        if (uris.isEmpty()) return
-        if (uris.size > 50) {
-            _state.update { it.copy(error = "Нельзя загрузить более 50 файлов одновременно.") }
-            return
-        }
-        if (currentSessionId.isBlank()) {
-            _state.update { it.copy(error = "Сначала откройте чат-сессию.") }
-            return
-        }
-
-        viewModelScope.launch {
-            _state.update { it.copy(isUploading = true, uploadStatus = "Загрузка ${uris.size} файлов...", error = null) }
-            fileRepository.uploadFilesToSession(currentSessionId, uris)
-                .onSuccess {
-                    _state.update { it.copy(isUploading = false, uploadStatus = "Файлы отправлены в чат!", error = null) }
-                }
-                .onFailure { err ->
-                    _state.update { it.copy(isUploading = false, error = "Ошибка отправки: ${err.message}", uploadStatus = null) }
-                }
+        _state.update {
+            it.copy(
+                isUploading = false,
+                uploadStatus = null,
+                error = "Загрузка файлов пока не поддерживается сервером Hermes (только текст и изображения-ссылки)."
+            )
         }
     }
 

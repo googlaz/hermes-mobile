@@ -99,14 +99,9 @@ fun AppNavigation() {
                 FileManagerScreen(viewModel = fileViewModel)
             }
             composable(Screen.Models.route) {
-                // Извлекаем состояние выбранного чата из ChatViewModel, чтобы переключать модель именно на ней (ФТ-3.2)
-                val chatState by chatViewModel.uiState.collectAsState()
-                val currentSession = chatState.sessions.find { it.id == chatState.activeSessionId }
-                
+                // Переключение модели теперь глобальное (через sidecar), сессия не нужна.
                 ModelSwitcherScreen(
-                    viewModel = modelViewModel,
-                    activeSessionId = chatState.activeSessionId,
-                    currentSessionModel = currentSession?.model
+                    viewModel = modelViewModel
                 )
             }
             composable(Screen.Logs.route) {

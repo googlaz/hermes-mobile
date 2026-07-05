@@ -2,6 +2,7 @@ package com.hermes.app.ui.models
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hermes.app.data.remote.dto.SidecarModelDto
 import com.hermes.app.data.repository.ModelRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,7 +13,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ModelUiState(
-    val models: List<String> = ModelRepository.FALLBACK_MODELS, // не даём экрану быть пустым
+    val models: List<SidecarModelDto> = ModelRepository.FALLBACK_MODELS, // не даём экрану быть пустым
+    val currentModel: String? = null,
     val isLoading: Boolean = false,
     val successMessage: String? = null,
     val error: String? = null
@@ -29,28 +31,40 @@ class ModelViewModel @Inject constructor(
     fun loadModels() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            modelRepository.getAvailableModels()
-                .onSuccess { list ->
-                    // list всегда содержит как минимум fallback-модели
-                    _state.update { it.copy(models = list, isLoading = false) }
-                }
-                .onFailure {
-                    // Даже при сбое показываем fallback-список
-                    _state.update { it.copy(models = ModelRepository.FALLBACK_MODELS, isLoading = false) }
-                }
+
+            val modelsResult = modelRepository.getModels()
+            val currentResult = modelRepository.getCurrentModel()
+
+            val models = modelsResult.getOrDefault(ModelRepository.FALLBACK_MODELS)
+            // Текущую берём из /current, иначе из флага current в списке моделей
+            val current = currentResult.getOrNull()?.model
+                ?: models.firstOrNull { it.current }?.id
+
+            _state.update {
+                it.copy(
+                    models = models,
+                    currentModel = current ?: it.currentModel,
+                    isLoading = false
+                )
+            }
         }
     }
 
-    fun switchActiveModel(sessionId: String, modelId: String, provider: String) {
+    fun switchActiveModel(modelId: String, provider: String?) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null, successMessage = null) }
-            modelRepository.switchModelForSession(sessionId, modelId, provider)
+            modelRepository.switchModel(modelId, provider)
                 .onSuccess {
                     _state.update {
                         it.copy(
                             isLoading = false,
-                            successMessage = "Модель успешно переключена на $modelId!"
+                            currentModel = modelId,
+                            successMessage = "Модель переключена на $modelId. Применится со следующего сообщения."
                         )
+                    }
+                    // Обновляем текущую модель с сервера для точности
+                    modelRepository.getCurrentModel().onSuccess { cur ->
+                        cur.model?.let { m -> _state.update { s -> s.copy(currentModel = m) } }
                     }
                 }
                 .onFailure { err ->

@@ -101,9 +101,42 @@ data class SwitchModelRequest(
 )
 
 // Запрос на обновление параметров сессии через PATCH (модель, провайдер)
+// Больше НЕ используется для переключения модели (переключение теперь глобальное через sidecar).
 data class PatchSessionRequest(
     @SerializedName("model") val model: String? = null,
     @SerializedName("provider") val provider: String? = null
+)
+
+// === Sidecar (порт 8643): live-редактор config.yaml ===
+data class SidecarModelsResponse(
+    @SerializedName("object") val obj: String? = null,
+    @SerializedName("data") val data: List<SidecarModelDto> = emptyList()
+)
+
+data class SidecarModelDto(
+    @SerializedName("id") val id: String,
+    @SerializedName("provider") val provider: String,
+    @SerializedName("label") val label: String? = null,
+    @SerializedName("current") val current: Boolean = false
+)
+
+data class SidecarCurrentDto(
+    @SerializedName("model") val model: String?,
+    @SerializedName("provider") val provider: String?,
+    @SerializedName("base_url") val baseUrl: String? = null
+)
+
+data class SetModelRequest(
+    @SerializedName("model") val model: String,
+    @SerializedName("provider") val provider: String? = null
+)
+
+data class SetModelResponse(
+    @SerializedName("ok") val ok: Boolean = false,
+    @SerializedName("model") val model: String? = null,
+    @SerializedName("provider") val provider: String? = null,
+    @SerializedName("note") val note: String? = null,
+    @SerializedName("error") val error: String? = null
 )
 
 // 5. Запись файла
