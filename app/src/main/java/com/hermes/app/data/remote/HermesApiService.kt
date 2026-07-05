@@ -35,12 +35,12 @@ interface HermesApiService {
         @Path("id") sessionId: String
     ): Response<MessageListResponse>
 
-    // Отправка сообщения (не-стриминговый)
+    // Отправка сообщения — /chat синхронный, возвращает полный ответ агента
     @POST("api/sessions/{id}/chat")
     suspend fun sendMessage(
         @Path("id") sessionId: String,
         @Body request: SendMessageRequest
-    ): Response<ChatMessageDto>
+    ): Response<ChatCompletionResponse>
 
     // Переключение модели в сессии через PATCH (возвращает тот же envelope {"session":{...}})
     @PATCH("api/sessions/{id}")
@@ -51,7 +51,7 @@ interface HermesApiService {
 
     // === 4. Jobs (активные задачи) ===
     @GET("api/jobs")
-    suspend fun getActiveJobs(): Response<List<RunDto>>
+    suspend fun getActiveJobs(): Response<JobsResponse>
 
     @DELETE("api/jobs/{id}")
     suspend fun cancelJob(
@@ -59,12 +59,15 @@ interface HermesApiService {
     ): Response<Unit>
 
     // === 5. Файлы (через multipart в чат) ===
+    // Best-effort: сервер /chat ожидает поле "message"; чистый multipart без него
+    // может вернуть 400, поэтому включаем текстовую часть "message" вместе с файлами.
     @Multipart
     @POST("api/sessions/{id}/chat")
     suspend fun uploadFilesToSession(
         @Path("id") sessionId: String,
-        @Part files: List<MultipartBody.Part>
-    ): Response<ChatMessageDto>
+        @Part files: List<MultipartBody.Part>,
+        @Part("message") message: okhttp3.RequestBody
+    ): Response<ChatCompletionResponse>
 
     @Streaming
     @GET("api/sessions/{sessionId}/messages/{messageId}/attachment")

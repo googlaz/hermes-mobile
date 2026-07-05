@@ -38,9 +38,10 @@ object NetworkModule {
             .addInterceptor(dynamicUrlInterceptor) // На лету подставляет актуальный сохраненный IP (для ФТ-1.1, ФТ-6.1)
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
-            .connectTimeout(5, TimeUnit.SECONDS) // Сократим таймаут до 5с для быстрой выдачи баннеров
-            .readTimeout(15, TimeUnit.SECONDS)
-            .writeTimeout(15, TimeUnit.SECONDS)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(180, TimeUnit.SECONDS)   // Локальный inference может занять 30-120с
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .callTimeout(200, TimeUnit.SECONDS)
             .build()
     }
 

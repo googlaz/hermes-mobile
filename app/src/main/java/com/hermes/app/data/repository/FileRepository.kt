@@ -4,7 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import com.hermes.app.data.remote.HermesApiService
-import com.hermes.app.data.remote.dto.ChatMessageDto
+import com.hermes.app.data.remote.dto.ChatCompletionResponse
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -34,7 +34,7 @@ class FileRepository @Inject constructor(
     suspend fun uploadFilesToSession(
         sessionId: String,
         uris: List<Uri>
-    ): Result<ChatMessageDto> = withContext(Dispatchers.IO) {
+    ): Result<ChatCompletionResponse> = withContext(Dispatchers.IO) {
         try {
             val limitedUris = uris.take(50)
             val parts = mutableListOf<MultipartBody.Part>()
@@ -46,7 +46,14 @@ class FileRepository @Inject constructor(
                 parts.add(MultipartBody.Part.createFormData("files", filename, body))
             }
 
-            val response = apiService.uploadFilesToSession(sessionId, parts)
+            // Best-effort: /chat ожидает поле "message"; добавляем текстовую часть,
+            // чтобы чистая multipart-загрузка файлов не отклонялась с 400.
+            val messagePart = RequestBody.create(
+                "text/plain".toMediaTypeOrNull(),
+                "Загружены файлы: " + limitedUris.mapNotNull { getFileNameFromUri(it) }.joinToString(", ")
+            )
+
+            val response = apiService.uploadFilesToSession(sessionId, parts, messagePart)
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {

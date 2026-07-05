@@ -25,9 +25,10 @@ class LogRepository @Inject constructor(
         try {
             val response = apiService.getActiveJobs()
             if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
+                // /api/jobs возвращает обёртку {"jobs":[...]}, извлекаем список
+                Result.success(response.body()!!.jobs)
             } else {
-                Result.failure(Exception("Не удалось получить задачи: ${response.code()}"))
+                Result.failure(Exception("Не удалось получить задачи: HTTP ${response.code()}"))
             }
         } catch (e: Exception) {
             Result.failure(e)

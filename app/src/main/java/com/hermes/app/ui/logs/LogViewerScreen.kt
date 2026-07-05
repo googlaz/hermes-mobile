@@ -69,6 +69,13 @@ fun LogViewerScreen(
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
+        } else if (state.jobsLoadedOk) {
+            // Успешный запрос, но задач нет — это норма, а не ошибка соединения
+            Text("Нет активных задач.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary)
+            Spacer(modifier = Modifier.height(16.dp))
+        } else if (state.error != null) {
+            Text(state.error!!, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
         // --- Секция 2: Терминал Логов --- ФТ-5.1 ---

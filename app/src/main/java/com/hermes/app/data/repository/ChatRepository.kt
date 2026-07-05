@@ -31,15 +31,30 @@ class ChatRepository @Inject constructor(
      * Создание новой сессии. Сначала заводится на ПК бэкенде, затем дублируется в локальную Room DB.
      */
     suspend fun createNewSession(title: String, model: String, provider: String): Result<ChatSessionEntity> = withContext(Dispatchers.IO) {
+        // Пробуем создать; при коллизии заголовка (invalid_title, HTTP 400) — один повтор с суффиксом.
+        val firstResult = attemptCreateSession(title, model, provider)
+        if (firstResult.isSuccess) return@withContext firstResult
+
+        val err = firstResult.exceptionOrNull()
+        if (err is InvalidTitleException) {
+            val retryTitle = title + " " + (System.currentTimeMillis() % 10000).toString()
+            return@withContext attemptCreateSession(retryTitle, model, provider)
+        }
+        firstResult
+    }
+
+    private class InvalidTitleException : Exception("invalid_title")
+
+    private suspend fun attemptCreateSession(title: String, model: String, provider: String): Result<ChatSessionEntity> {
         val request = CreateSessionRequest(title, model, provider)
-        try {
+        return try {
             val response = apiService.createSession(request)
             if (response.isSuccessful && response.body() != null) {
                 val dto = response.body()!!.session
                 val createdMs = (dto.startedAt * 1000).toLong()
                 val entity = ChatSessionEntity(
                     id = dto.id,
-                    title = dto.title ?: "New Chat",
+                    title = dto.title ?: title,
                     model = dto.model,
                     provider = provider,
                     createdAt = createdMs,
@@ -47,11 +62,18 @@ class ChatRepository @Inject constructor(
                 )
                 sessionDao.upsertSession(entity)
                 Result.success(entity)
+            } else if (response.code() == 400) {
+                val body = response.errorBody()?.string().orEmpty()
+                if (body.contains("invalid_title")) {
+                    Result.failure(InvalidTitleException())
+                } else {
+                    Result.failure(Exception("Ошибка создания сессии: HTTP 400. $body"))
+                }
             } else {
                 Result.failure(Exception("Ошибка создания сессии: HTTP ${response.code()}. Проверьте подключение в Настройках."))
             }
         } catch (e: Exception) {
-            // Не создаём офлайн-сессию — локальный UUID бесполезен для SSE и отправки сообщений
+            // Не создаём офлайн-сессию — локальный UUID бесполезен для отправки сообщений
             Result.failure(Exception("Нет соединения с Hermes. Настройте IP и ключ в разделе Настройки."))
         }
     }
@@ -76,15 +98,17 @@ class ChatRepository @Inject constructor(
         try {
             val response = apiService.sendMessage(sessionId, SendMessageRequest(content))
             if (response.isSuccessful && response.body() != null) {
-                // Сервер обработал — обновляем или подтверждаем сообщение
-                // Опционально: ТЗ не требует жесткой синхронизации UUIDs
+                // /chat синхронный — полный ответ агента лежит в message.content.
+                // Сохраняем его как ассистентское сообщение, чтобы observeMessages его отобразил.
+                val answer = response.body()!!.message.content
+                saveAssistantMessage(sessionId, UUID.randomUUID().toString(), answer)
                 Result.success(localUserMessage)
             } else {
-                Result.failure(Exception("Сервер отклонил сообщение: ${response.code()}"))
+                Result.failure(Exception("Сервер отклонил сообщение: HTTP ${response.code()}"))
             }
         } catch (e: Exception) {
-            // В офлайн-режиме сообщение остается локально, сигнализируем об успехе локального сохранения
-            Result.success(localUserMessage)
+            // Таймаут/сеть: локальная модель может думать долго
+            Result.failure(Exception("Нет ответа от агента (таймаут). Локальная модель может отвечать долго."))
         }
     }
 

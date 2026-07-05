@@ -1,7 +1,6 @@
 package com.hermes.app.data.repository
 
 import com.hermes.app.data.remote.HermesApiService
-import com.hermes.app.data.remote.dto.ModelDto
 import com.hermes.app.data.remote.dto.PatchSessionRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -13,21 +12,34 @@ class ModelRepository @Inject constructor(
     private val apiService: HermesApiService,
     private val sessionDao: com.hermes.app.data.local.dao.ChatSessionDao
 ) {
+    companion object {
+        // На сервере НЕТ каталога моделей: GET /v1/models отдаёт только идентичность агента
+        // ("hermes-agent"), а реальные LLM живут в конфиге ПК и не отдаются по API.
+        // Поэтому используем захардкоженный список доступных пользователю моделей.
+        val FALLBACK_MODELS: List<String> = listOf("qwen3.5:9b", "qwen3.5-tuned")
+        private const val AGENT_IDENTITY_ID = "hermes-agent"
+    }
+
     /**
-     * Список доступных моделей через GET /v1/models (OpenAI-совместимый формат) (ФТ-3.1)
+     * Список доступных моделей. Возвращаем захардкоженный fallback, дополненный тем,
+     * что вернёт GET /v1/models (за вычетом идентичности агента "hermes-agent").
+     * Экран никогда не остаётся пустым.
      */
-    suspend fun getAvailableModels(): Result<List<ModelDto>> = withContext(Dispatchers.IO) {
+    suspend fun getAvailableModels(): Result<List<String>> = withContext(Dispatchers.IO) {
+        val merged = LinkedHashSet<String>()
+        merged.addAll(FALLBACK_MODELS)
         try {
             val response = apiService.getAvailableModels()
             if (response.isSuccessful && response.body() != null) {
-                // /v1/models возвращает {data: [...]} — извлекаем список
-                Result.success(response.body()!!.data)
-            } else {
-                Result.failure(Exception("Не удалось получить модели: ${response.code()}"))
+                response.body()!!.data
+                    .map { it.id }
+                    .filter { it != AGENT_IDENTITY_ID }
+                    .forEach { merged.add(it) }
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            // Игнорируем сетевую ошибку — fallback-списка достаточно
         }
+        Result.success(merged.toList())
     }
 
     /**

@@ -91,6 +91,11 @@ fun AppNavigation() {
                 ChatScreen(viewModel = chatViewModel)
             }
             composable(Screen.Files.route) {
+                // Прокидываем активную чат-сессию в файловый менеджер (ФТ-4.3)
+                val chatState by chatViewModel.uiState.collectAsState()
+                androidx.compose.runtime.LaunchedEffect(chatState.activeSessionId) {
+                    chatState.activeSessionId?.let { fileViewModel.setSession(it) }
+                }
                 FileManagerScreen(viewModel = fileViewModel)
             }
             composable(Screen.Models.route) {

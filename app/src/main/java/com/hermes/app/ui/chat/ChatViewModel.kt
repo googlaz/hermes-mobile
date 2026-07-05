@@ -4,20 +4,21 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hermes.app.data.local.entity.ChatMessageEntity
 import com.hermes.app.data.local.entity.ChatSessionEntity
-import com.hermes.app.data.remote.SseClient
 import com.hermes.app.data.repository.ChatRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.util.UUID
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 
 data class ChatUiState(
     val sessions: List<ChatSessionEntity> = emptyList(),
     val activeSessionId: String? = null,
     val messages: List<ChatMessageEntity> = emptyList(),
-    val streamingTextBySession: Map<String, String> = emptyMap(), // Стримящийся текст в разрезе сессии (ФТ-2.3)
+    val streamingTextBySession: Map<String, String> = emptyMap(), // Оставлено для совместимости UI; SSE больше не используется
     val isSending: Boolean = false,
     val isAgentRunningTasks: Boolean = false, // Задача агента выполняется? (ФТ-2.5)
     val error: String? = null
@@ -25,15 +26,13 @@ data class ChatUiState(
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
-    private val chatRepository: ChatRepository,
-    private val sseClient: SseClient
+    private val chatRepository: ChatRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     private var messageObserveJob: Job? = null
-    private var sseJobs = mutableMapOf<String, Job>()
 
     init {
         // Подписываемся на вкладки сессий из Room DB (ФТ-2.1)
@@ -54,7 +53,7 @@ class ChatViewModel @Inject constructor(
      */
     fun selectSession(sessionId: String) {
         _uiState.update { it.copy(activeSessionId = sessionId, error = null) }
-        
+
         // Переподписываемся на сообщения конкретной сессии
         messageObserveJob?.cancel()
         messageObserveJob = chatRepository.observeMessages(sessionId)
@@ -66,18 +65,25 @@ class ChatViewModel @Inject constructor(
     }
 
     /**
-     * Создать вкладку / сессию (ФТ-2.2)
+     * Создать вкладку / сессию (ФТ-2.2). Заголовок делаем уникальным по умолчанию,
+     * т.к. сервер отклоняет дубликаты заголовков (invalid_title, HTTP 400).
      */
     fun createSession(title: String, defaultModel: String, provider: String) {
+        val uniqueTitle = if (title.isBlank()) uniqueDefaultTitle() else title
         viewModelScope.launch {
-            chatRepository.createNewSession(title, defaultModel, provider)
+            chatRepository.createNewSession(uniqueTitle, defaultModel, provider)
                 .onSuccess { newSession ->
-                    selectSession(entityId(newSession))
+                    selectSession(newSession.id)
                 }
                 .onFailure { err ->
                     _uiState.update { it.copy(error = err.localizedMessage) }
                 }
         }
+    }
+
+    private fun uniqueDefaultTitle(): String {
+        val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+        return "Чат $time"
     }
 
     /**
@@ -86,15 +92,11 @@ class ChatViewModel @Inject constructor(
     fun deleteActiveSession() {
         val currentSessionId = _uiState.value.activeSessionId ?: return
         val currentSession = _uiState.value.sessions.find { it.id == currentSessionId } ?: return
-        
-        viewModelScope.launch {
-            // Закрываем висящие стримы по удаляемой сессии
-            sseJobs[currentSessionId]?.cancel()
-            sseJobs.remove(currentSessionId)
 
+        viewModelScope.launch {
             chatRepository.deleteSession(currentSession)
-            
-            _uiState.update { 
+
+            _uiState.update {
                 it.copy(
                     activeSessionId = null,
                     messages = emptyList()
@@ -104,56 +106,23 @@ class ChatViewModel @Inject constructor(
     }
 
     /**
-     * Отправка сообщения и запуск реалтайм SSE прослушки токенов (ФТ-2.3)
+     * Отправка сообщения. /chat синхронный: ChatRepository сохраняет ответ ассистента
+     * в Room, а observeMessages его отобразит. SSE больше не используется.
      */
     fun sendMessage(content: String) {
         val sessionId = _uiState.value.activeSessionId ?: return
         if (content.isBlank()) return
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isSending = true, isAgentRunningTasks = true) }
-
-            // 1. Отправляем REST-запрос на регистрацию текста пользователя в БД
-            chatRepository.sendUserMessage(sessionId, content)
-
-            // 2. Инициируем SSE Stream для стриминга токенов ассистента в реальном времени
-            sseJobs[sessionId]?.cancel() // Отменяем старый стрим если был
-            
-            val assistantResponseText = StringBuilder()
-            val assMessageId = UUID.randomUUID().toString()
-
-            sseJobs[sessionId] = viewModelScope.launch {
-                sseClient.connectSessionStream(sessionId)
-                    .onEach { chunk ->
-                        // Наращиваем текст чанка на экране (ФТ-2.3)
-                        assistantResponseText.append(chunk)
-                        _uiState.update { state ->
-                            val updatedMap = state.streamingTextBySession.toMutableMap()
-                            updatedMap[sessionId] = assistantResponseText.toString()
-                            state.copy(streamingTextBySession = updatedMap)
-                        }
+            _uiState.update { it.copy(isSending = true, isAgentRunningTasks = true, error = null) }
+            try {
+                chatRepository.sendUserMessage(sessionId, content)
+                    .onFailure { err ->
+                        _uiState.update { it.copy(error = err.localizedMessage) }
                     }
-                    .onCompletion { error ->
-                        // Поток завершен успешно или оборвался
-                        _uiState.update { it.copy(isSending = false, isAgentRunningTasks = false) }
-                        
-                        val finalText = assistantResponseText.toString()
-                        if (finalText.isNotBlank()) {
-                            // Вбиваем итоговое собранное сообщение в локальный кэш Room
-                            chatRepository.saveAssistantMessage(sessionId, assMessageId, finalText)
-                            
-                            // Очищаем стриминговый буфер отображения
-                            _uiState.update { state ->
-                                val updatedMap = state.streamingTextBySession.toMutableMap()
-                                updatedMap.remove(sessionId)
-                                state.copy(streamingTextBySession = updatedMap)
-                            }
-                        }
-                    }
-                    .collect()
+            } finally {
+                _uiState.update { it.copy(isSending = false, isAgentRunningTasks = false) }
             }
         }
     }
-
-    private fun entityId(session: ChatSessionEntity): String = session.id
 }

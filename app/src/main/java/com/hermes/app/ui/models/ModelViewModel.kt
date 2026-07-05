@@ -2,7 +2,6 @@ package com.hermes.app.ui.models
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hermes.app.data.remote.dto.ModelDto
 import com.hermes.app.data.repository.ModelRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,7 +12,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ModelUiState(
-    val models: List<ModelDto> = emptyList(),
+    val models: List<String> = ModelRepository.FALLBACK_MODELS, // не даём экрану быть пустым
     val isLoading: Boolean = false,
     val successMessage: String? = null,
     val error: String? = null
@@ -27,20 +26,17 @@ class ModelViewModel @Inject constructor(
     private val _state = MutableStateFlow(ModelUiState())
     val state: StateFlow<ModelUiState> = _state.asStateFlow()
 
-    init {
-        // Не загружаем автоматически — только по явному запросу пользователя (кнопка или onResume)
-        // чтобы не стрелять в 100.100.100.100 до того как пользователь настроит соединение
-    }
-
     fun loadModels() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             modelRepository.getAvailableModels()
                 .onSuccess { list ->
+                    // list всегда содержит как минимум fallback-модели
                     _state.update { it.copy(models = list, isLoading = false) }
                 }
-                .onFailure { err ->
-                    _state.update { it.copy(error = "Ошибка загрузки моделей: ${err.message}", isLoading = false) }
+                .onFailure {
+                    // Даже при сбое показываем fallback-список
+                    _state.update { it.copy(models = ModelRepository.FALLBACK_MODELS, isLoading = false) }
                 }
         }
     }
@@ -50,19 +46,19 @@ class ModelViewModel @Inject constructor(
             _state.update { it.copy(isLoading = true, error = null, successMessage = null) }
             modelRepository.switchModelForSession(sessionId, modelId, provider)
                 .onSuccess {
-                    _state.update { 
+                    _state.update {
                         it.copy(
                             isLoading = false,
                             successMessage = "Модель успешно переключена на $modelId!"
-                        ) 
+                        )
                     }
                 }
                 .onFailure { err ->
-                    _state.update { 
+                    _state.update {
                         it.copy(
                             isLoading = false,
                             error = "Не удалось сменить модель: ${err.message}"
-                        ) 
+                        )
                     }
                 }
         }

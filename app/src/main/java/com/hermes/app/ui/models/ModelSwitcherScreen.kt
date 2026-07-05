@@ -1,7 +1,7 @@
 package com.hermes.app.ui.models
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
-import com.hermes.app.data.remote.dto.ModelDto
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,7 +38,7 @@ fun ModelSwitcherScreen(
 
         if (activeSessionId == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Откройте вкладку чата, чтобы переключить на ней модель", color = Color.Gray)
+                Text("Сначала откройте чат-сессию", color = Color.Gray)
             }
             return
         }
@@ -51,49 +50,28 @@ fun ModelSwitcherScreen(
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
-        // Разделяем локальные Ollama от облачных OpenRouter
-        val ollamaModels = state.models.filter { it.provider == "ollama" }
-        val openRouterModels = state.models.filter { it.provider == "openrouter" }
-
         Box(modifier = Modifier.weight(1f)) {
-            if (state.isLoading && state.models.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    Text(
+                        "Доступные модели",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // --- Секция Ollama (локальные модели) ---
-                    if (ollamaModels.isNotEmpty()) {
-                        item {
-                            Text("Локальные модели (Ollama)", style = MaterialTheme.typography.titleMedium, color = Color.Gray)
-                            Spacer(modifier = Modifier.height(8.dp))
+                items(state.models) { modelId ->
+                    ModelItemRow(
+                        modelId = modelId,
+                        isSelected = modelId == currentSessionModel,
+                        onClick = {
+                            // Локальные qwen-модели работают через провайдер "ollama"
+                            viewModel.switchActiveModel(activeSessionId, modelId, "ollama")
                         }
-                        items(ollamaModels) { model ->
-                            ModelItemRow(
-                                model = model,
-                                isSelected = model.id == currentSessionModel,
-                                onClick = { viewModel.switchActiveModel(activeSessionId, model.id, "ollama") }
-                            )
-                        }
-                    }
-
-                    // --- Секция OpenRouter (облачные модели) ---
-                    if (openRouterModels.isNotEmpty()) {
-                        item {
-                            Text("Облачные модели (OpenRouter)", style = MaterialTheme.typography.titleMedium, color = Color.Gray)
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
-                        items(openRouterModels) { model ->
-                            ModelItemRow(
-                                model = model,
-                                isSelected = model.id == currentSessionModel,
-                                onClick = { viewModel.switchActiveModel(activeSessionId, model.id, "openrouter") }
-                            )
-                        }
-                    }
+                    )
                 }
             }
         }
@@ -106,9 +84,10 @@ fun ModelSwitcherScreen(
             Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 8.dp))
         }
 
-        // Кнопка ручной синхронизации моделей с ПК
+        // Кнопка ручной синхронизации моделей с ПК (мёржит /v1/models с fallback-списком)
         Button(
             onClick = { viewModel.loadModels() },
+            enabled = !state.isLoading,
             modifier = Modifier.fillMaxWidth().height(50.dp)
         ) {
             Text("Обновить список моделей с ПК")
@@ -118,7 +97,7 @@ fun ModelSwitcherScreen(
 
 @Composable
 fun ModelItemRow(
-    model: ModelDto,
+    modelId: String,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
@@ -152,9 +131,9 @@ fun ModelItemRow(
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(model.name, style = MaterialTheme.typography.titleMedium, color = contentColor)
+                Text(modelId, style = MaterialTheme.typography.titleMedium, color = contentColor)
                 Text(
-                    text = "ID: ${model.id} | Контекст: ${model.contextLength} токенов",
+                    text = "ID: $modelId",
                     style = MaterialTheme.typography.labelSmall,
                     color = contentColor.copy(alpha = 0.6f)
                 )

@@ -14,6 +14,7 @@ data class LogUiState(
     val logs: List<LogEntryEntity> = emptyList(),
     val activeRuns: List<RunDto> = emptyList(),
     val isSyncing: Boolean = false,
+    val jobsLoadedOk: Boolean = false, // true если последний запрос /api/jobs прошёл (даже с пустым списком)
     val error: String? = null
 )
 
@@ -38,8 +39,8 @@ class LogViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isSyncing = true, error = null) }
             logRepository.getActiveRuns()
-                .onSuccess { list -> _state.update { it.copy(activeRuns = list, isSyncing = false) } }
-                .onFailure { err -> _state.update { it.copy(isSyncing = false, error = "Ошибка чтения задач: ${err.message}") } }
+                .onSuccess { list -> _state.update { it.copy(activeRuns = list, isSyncing = false, jobsLoadedOk = true, error = null) } }
+                .onFailure { err -> _state.update { it.copy(isSyncing = false, jobsLoadedOk = false, error = "Ошибка чтения задач: ${err.message}") } }
         }
     }
 

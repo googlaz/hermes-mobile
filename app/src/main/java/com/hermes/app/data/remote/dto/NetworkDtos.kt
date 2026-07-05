@@ -61,6 +61,30 @@ data class SendMessageRequest(
     @SerializedName("message") val content: String
 )
 
+// Ответ синхронного /chat — {"object":"hermes.session.chat.completion","session_id":"...","message":{...},"usage":{...}}
+data class ChatCompletionResponse(
+    @SerializedName("object") val obj: String?,
+    @SerializedName("session_id") val sessionId: String?,
+    @SerializedName("message") val message: ChatCompletionMessage,
+    @SerializedName("usage") val usage: UsageDto? = null
+)
+
+data class ChatCompletionMessage(
+    @SerializedName("role") val role: String,
+    @SerializedName("content") val content: String
+)
+
+data class UsageDto(
+    @SerializedName("input_tokens") val inputTokens: Int? = null,
+    @SerializedName("output_tokens") val outputTokens: Int? = null,
+    @SerializedName("total_tokens") val totalTokens: Int? = null
+)
+
+// Ответ /api/jobs — обёртка {"jobs":[...]}, НЕ голый массив
+data class JobsResponse(
+    @SerializedName("jobs") val jobs: List<RunDto> = emptyList()
+)
+
 // 4. Доступные LLM-модели
 data class ModelDto(
     @SerializedName("id") val id: String,             // e.g. "qwen3.5:9b"

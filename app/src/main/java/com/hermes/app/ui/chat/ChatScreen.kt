@@ -177,10 +177,9 @@ fun ChatScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val t = if (newTitle.isBlank()) "Новый чат" else newTitle
-                        // В ТЗ указано: переключение Ollama/OpenRouter на лету. 
-                        // По дефолту вешаем qwen3.5:9b на локальный оллама (пользователь предпочитает локалки, см. профиль)
-                        viewModel.createSession(t, "qwen3.5:9b", "ollama")
+                        // Пустой заголовок → ChatViewModel сгенерирует уникальный ("Чат HH:mm:ss"),
+                        // чтобы избежать коллизии invalid_title на сервере
+                        viewModel.createSession(newTitle, "qwen3.5:9b", "ollama")
                         showCreateDialog = false
                     }
                 ) {
