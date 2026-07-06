@@ -28,7 +28,8 @@ class SettingsViewModel @Inject constructor(
             it.copy(
                 host = securePreferences.tailscaleHost ?: "",
                 port = securePreferences.serverPort.toString(),
-                token = securePreferences.apiServerKey ?: ""
+                token = securePreferences.apiServerKey ?: "",
+                workdir = securePreferences.workdir ?: ""
             )
         }
         // Авточек только если IP уже настроен
@@ -48,7 +49,8 @@ class SettingsViewModel @Inject constructor(
             is SettingsEvent.OnTokenChanged -> {
                 _state.update { it.copy(token = event.token) }
             }
-            is SettingsEvent.OnSaveClicked -> {
+            is SettingsEvent.OnWorkdirChanged -> _state.update { it.copy(workdir = event.workdir) }
+            is SettingsEvent.OnSaveClicked -> saveSettings()
                 saveSettings()
             }
             is SettingsEvent.OnCheckConnectionTriggered -> {
@@ -70,6 +72,7 @@ class SettingsViewModel @Inject constructor(
         securePreferences.tailscaleHost = currentState.host
         securePreferences.serverPort = portInt
         securePreferences.apiServerKey = currentState.token
+        securePreferences.workdir = currentState.workdir.ifBlank { null }
 
         _state.update { it.copy(errorMessage = "Настройки успешно сохранены!") }
         

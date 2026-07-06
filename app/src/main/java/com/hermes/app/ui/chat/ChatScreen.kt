@@ -25,6 +25,16 @@ import androidx.compose.runtime.collectAsState
 import com.hermes.app.ui.chat.components.ChatTabs
 import com.hermes.app.ui.chat.components.MessageBubble
 
+// Доступные модели для выбора при создании сессии
+private val AVAILABLE_MODELS = listOf(
+    "qwen3.5:9b" to "ollama",
+    "qwen3.5-tuned" to "ollama",
+    "google/gemini-2.5-flash" to "openrouter",
+    "anthropic/claude-sonnet-4.5" to "openrouter",
+    "openai/gpt-4o" to "openrouter",
+    "meta-llama/llama-3.3-70b-instruct" to "openrouter"
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
@@ -217,26 +227,45 @@ fun ChatScreen(
         }
     }
 
-    // --- Диалог добавления вкладки (ФТ-2.2) ---
+    // --- Диалог добавления вкладки (ФТ-2.2) с выбором модели ---
     if (showCreateDialog) {
         var newTitle by remember { mutableStateOf("") }
+        var selectedModelIdx by remember { mutableStateOf(0) }
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
             title = { Text("Новая сессия") },
             text = {
-                OutlinedTextField(
-                    value = newTitle,
-                    onValueChange = { newTitle = it },
-                    label = { Text("Название диалога") },
-                    placeholder = { Text("Например: My Project") }
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = newTitle,
+                        onValueChange = { newTitle = it },
+                        label = { Text("Название диалога") },
+                        placeholder = { Text("Например: My Project") },
+                        singleLine = true
+                    )
+                    Text("Модель:", style = MaterialTheme.typography.labelMedium)
+                    Column {
+                        AVAILABLE_MODELS.forEachIndexed { index, (model, provider) ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                RadioButton(
+                                    selected = selectedModelIdx == index,
+                                    onClick = { selectedModelIdx = index }
+                                )
+                                Column {
+                                    Text(model, style = MaterialTheme.typography.bodySmall)
+                                    Text(provider, style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                }
+                            }
+                        }
+                    }
+                }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        // Пустой заголовок → ChatViewModel сгенерирует уникальный ("Чат HH:mm:ss"),
-                        // чтобы избежать коллизии invalid_title на сервере
-                        viewModel.createSession(newTitle, "qwen3.5:9b", "ollama")
+                        val (model, provider) = AVAILABLE_MODELS[selectedModelIdx]
+                        viewModel.createSession(newTitle, model, provider)
                         showCreateDialog = false
                     }
                 ) {

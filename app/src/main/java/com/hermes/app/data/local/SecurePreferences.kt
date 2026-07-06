@@ -49,6 +49,10 @@ class SecurePreferences @Inject constructor(
     val sidecarBaseUrl: String
         get() = "http://${tailscaleHost ?: "127.0.0.1"}:$SIDECAR_PORT/"
 
+    var workdir: String?
+        get() = sharedPreferences.getString("workdir", null)
+        set(value) { sharedPreferences.edit().putString("workdir", value).apply() }
+
     fun clear() {
         sharedPreferences.edit().clear().apply()
     }

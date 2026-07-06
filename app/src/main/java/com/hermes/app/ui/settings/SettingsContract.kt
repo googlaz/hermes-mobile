@@ -4,6 +4,7 @@ data class SettingsState(
     val host: String = "",
     val port: String = "8642",
     val token: String = "",
+    val workdir: String = "",
     val isHostValid: Boolean = true,
     val isCheckingConnection: Boolean = false,
     val connectionStatus: ConnectionStatus = ConnectionStatus.UNKNOWN,
@@ -20,6 +21,7 @@ sealed interface SettingsEvent {
     data class OnHostChanged(val host: String) : SettingsEvent
     data class OnPortChanged(val port: String) : SettingsEvent
     data class OnTokenChanged(val token: String) : SettingsEvent
+    data class OnWorkdirChanged(val workdir: String) : SettingsEvent
     object OnSaveClicked : SettingsEvent
     object OnCheckConnectionTriggered : SettingsEvent
 }
