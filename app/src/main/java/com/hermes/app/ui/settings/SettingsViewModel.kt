@@ -51,8 +51,6 @@ class SettingsViewModel @Inject constructor(
             }
             is SettingsEvent.OnWorkdirChanged -> _state.update { it.copy(workdir = event.workdir) }
             is SettingsEvent.OnSaveClicked -> saveSettings()
-                saveSettings()
-            }
             is SettingsEvent.OnCheckConnectionTriggered -> {
                 checkConnection()
             }
